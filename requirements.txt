@@ -1,2 +1,8 @@
 django
 httpx
+tensorflow
+keras
+pillow
+numpy
+scikit-learn
+albumentations

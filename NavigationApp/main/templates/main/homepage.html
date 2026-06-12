@@ -3,7 +3,7 @@
 <html lang="cs">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
     <title>BUIA - Navigace k nouzovému východu</title>
     <style>
         :root{
@@ -11,86 +11,107 @@
             --bg-2: #0f1720;
             --accent: #00f5ff;
             --accent-2: #7c4dff;
+            --danger: #ff6b6b;
+            --success: #51cf66;
             --muted: rgba(255,255,255,0.35);
             --glass-border: rgba(255,255,255,0.04);
             font-family: Inter, system-ui, "Segoe UI", Roboto, Arial;
         }
+        * { box-sizing: border-box; }
         html,body{ height:100%; margin:0; background: linear-gradient(180deg,var(--bg-1),var(--bg-2)); color:#e6eef8; }
-        .app { display:grid; grid-template-columns: 1fr 420px; gap:28px; padding:28px; height:100vh; box-sizing:border-box; align-items:stretch; }
-        header.app-head{ grid-column:1/-1; display:flex; align-items:center; gap:18px; padding:12px 18px; border-radius:12px; background:rgba(255,255,255,0.02); border: 1px solid var(--glass-border); }
-        .canvas { border-radius:14px; padding:22px; background:rgba(255,255,255,0.01); border:1px solid var(--glass-border); position:relative; overflow:hidden; }
-        .map { height:calc(100% - 40px); border-radius:10px; position:relative; display:flex; align-items:center; justify-content:center; }
-        .floorplan { width:86%; height:86%; border-radius:8px; position:relative; overflow:hidden; background:#061017; }
-        .panel { border-radius:14px; padding:18px; background:rgba(255,255,255,0.01); border:1px solid var(--glass-border); display:flex; flex-direction:column; gap:14px; }
-        .big { font-weight:700; font-size:28px; color:var(--accent); }
-        .muted { color:var(--muted); font-size:13px; }
-        #floorplan-svg { width:100%; height:100%; }
-        #route-layer { pointer-events:none; }
-        #steps-list { display:flex; flex-direction:column; gap:6px; margin-top:8px; }
-        .step { padding:8px; border-radius:8px; background:rgba(255,255,255,0.01); font-size:13px; }
-        @media (max-width:980px){ .app{ grid-template-columns: 1fr; padding:16px; } .panel { order:2; } .canvas { order:1; height:64vh; } }
+        .app { display:flex; flex-direction:column; height:100vh; max-width:600px; margin:0 auto; }
+        
+        header { padding:16px; background:rgba(255,255,255,0.02); border-bottom:1px solid var(--glass-border); }
+        header h1 { margin:0; font-size:20px; color:var(--accent); }
+        header p { margin:4px 0 0 0; font-size:12px; color:var(--muted); }
+        
+        .camera-container { flex:1; position:relative; background:#000; overflow:hidden; }
+        #video-feed { width:100%; height:100%; object-fit:cover; }
+        #camera-overlay { position:absolute; top:0; left:0; right:0; bottom:0; pointer-events:none; }
+        
+        .status-bar { padding:12px 16px; background:rgba(255,255,255,0.02); border-top:1px solid var(--glass-border); }
+        .location-badge { display:inline-block; padding:6px 12px; background:rgba(0,245,255,0.1); border:1px solid var(--accent); border-radius:20px; font-size:14px; font-weight:600; margin-bottom:8px; }
+        .instruction { font-size:16px; line-height:1.5; margin:8px 0; }
+        .confidence { font-size:12px; color:var(--muted); }
+        
+        /* Large prompt box styles (match safe-mode visual style) */
+        .prompt-box { display:none; padding:20px; border-radius:12px; margin:12px 0; font-weight:700; text-align:center; box-shadow:0 6px 18px rgba(0,0,0,0.4); }
+        .prompt-box h2 { margin:0 0 8px 0; font-size:22px; }
+        .prompt-box p { margin:0; font-size:16px; font-weight:600; }
+
+        /* Per-location color schemes */
+        .prompt-venek { background: rgba(81,207,102,0.12); border:2px solid #51cf66; color:#51cf66; }
+        .prompt-chodba { background: rgba(0,180,255,0.08); border:2px solid #00b4ff; color:#00b4ff; }
+        .prompt-ucebna { background: rgba(124,77,255,0.08); border:2px solid #7c4dff; color:#7c4dff; }
+        .prompt-schodiste { background: rgba(255,159,28,0.08); border:2px solid #ff9f1c; color:#ff9f1c; }
+        .prompt-turnikety { background: rgba(255,107,107,0.08); border:2px solid #ff6b6b; color:#ff6b6b; }
+
+        .controls { padding:16px; display:flex; gap:12px; background:rgba(255,255,255,0.02); border-top:1px solid var(--glass-border); }
+        .btn { flex:1; padding:14px 20px; border:none; border-radius:12px; font-size:16px; font-weight:600; cursor:pointer; transition:all 0.2s; }
+        .btn-primary { background:var(--accent); color:#000; }
+        .btn-primary:hover { background:#00d4e0; }
+        .btn-primary:disabled { opacity:0.5; cursor:not-allowed; }
+        
+        .loading { display:none; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(0,0,0,0.8); padding:20px 30px; border-radius:12px; }
+        .loading.active { display:block; }
+        .spinner { width:30px; height:30px; border:3px solid var(--accent); border-top-color:transparent; border-radius:50%; animation:spin 1s linear infinite; margin:0 auto 10px; }
+        @keyframes spin { to { transform:rotate(360deg); } }
+        
+        .error { display:none; padding:12px 16px; background:rgba(255,107,107,0.1); border:1px solid var(--danger); border-radius:8px; margin:16px; font-size:14px; }
+        .error.active { display:block; }
+        
+        .safe-mode { display:none; padding:20px; background:rgba(81,207,102,0.1); border:1px solid var(--success); border-radius:12px; margin:16px; text-align:center; }
+        .safe-mode.active { display:block; }
+        .safe-mode h2 { margin:0 0 8px 0; color:var(--success); font-size:24px; }
+        .safe-mode p { margin:0; font-size:16px; }
     </style>
 </head>
 <body>
-    <div class="app" role="application" aria-label="Navigace k nouzovému východu">
-        <header class="app-head" role="banner">
-            <div>
-                <h1 style="margin:0;">BUIA — Mobilní navigace k nouzovému východu</h1>
-                <p class="subtitle muted" style="margin:0;">Ukázková aplikace — školní půdorys</p>
-            </div>
+    <div class="app">
+        <header>
+            <h1>BUIA - Nouzová navigace</h1>
+            <p>AI asistent pro evakuaci</p>
         </header>
 
-        <main class="canvas" role="main">
-            <div class="map">
-                <div id="floorplan" class="floorplan" role="img" aria-label="Simulovaný půdorys">
-                    <svg id="floorplan-svg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet" style="position:absolute;inset:0;">
-                        <defs>
-                            <linearGradient id="g" x1="0" x2="1"><stop offset="0" stop-color="#00ffd2" stop-opacity="0.08"/><stop offset="1" stop-color="#7c4dff" stop-opacity="0.05"/></linearGradient>
-                        </defs>
-                        <rect x="0" y="0" width="100" height="100" fill="#071018"/>
-                        <!-- simplistic floor geometry for the school layout -->
-                        <rect x="4" y="40" width="32" height="20" rx="1" fill="#0b2630" stroke="#0f3a45"/>
-                        <rect x="36" y="30" width="40" height="14" rx="1" fill="#0b2630" stroke="#0f3a45"/>
-                        <rect x="46" y="14" width="36" height="18" rx="1" fill="#0b2630" stroke="#0f3a45"/>
-                        <rect x="64" y="34" width="28" height="18" rx="1" fill="#0b2630" stroke="#0f3a45"/>
-                        <rect x="46" y="78" width="12" height="16" rx="1" fill="#0b2630" stroke="#0f3a45"/>
-                        <!-- map grid -->
-                        <g id="map-grid" fill="none" stroke="rgba(255,255,255,0.02)" stroke-width="0.4"></g>
-                        <g id="route-layer"></g>
-                        <!-- fixed markers for exits (visual) -->
-                        <circle cx="98" cy="50" r="1.6" fill="#ff8a5b" />
-                        <circle cx="52" cy="98" r="1.6" fill="#ff8a5b" />
-                    </svg>
-                </div>
+        <div class="camera-container">
+            <video id="video-feed" autoplay playsinline muted></video>
+            <div id="camera-overlay"></div>
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <div>Analýzuji polohu...</div>
             </div>
-        </main>
+        </div>
 
-        <aside class="panel" role="complementary" aria-label="Ovládací panel">
-            <div style="display:flex;justify-content:space-between;align-items:center;">
-                <div>
-                    <h3 style="margin:0;">Aktuální vzdálenost</h3>
-                    <div id="dist-to-exit" class="big">— m</div>
-                    <div class="muted" id="eta">— s</div>
-                </div>
-                <div style="text-align:right;">
-                    <div class="muted">Cíl: nejbližší nouzový východ</div>
-                </div>
+        <div class="status-bar">
+            <div id="location-display" class="location-badge" style="display:none;">
+                <span id="location-name">---</span>
             </div>
+            <div id="instruction-display" class="instruction">
+                Zapněte kameru pro zjištění polohy
+            </div>
+            <div id="prompt-box" class="prompt-box">
+                <h2 id="prompt-title">---</h2>
+                <p id="prompt-instruction">---</p>
+                <div id="prompt-confidence" class="confidence"></div>
+            </div>
+            <div id="confidence-display" class="confidence"></div>
+        </div>
 
-            <div>
-                <h3 style="margin:0;">Kroky trasy</h3>
-                <div id="steps-list" class="muted"></div>
-            </div>
+        <div class="error" id="error-display">
+            <span id="error-message"></span>
+        </div>
 
-            <div style="margin-top:auto;">
-                <div style="display:flex;gap:8px;">
-                    <button id="mock-btn" class="btn">Vygenerovat testní pozici</button>
-                    <div class="muted" style="align-self:center;font-size:13px;">Klikněte na plán pro vlastní pozici</div>
-                </div>
-            </div>
-        </aside>
+        <div class="safe-mode" id="safe-mode">
+            <h2>✓ JSTE V BEZPEČÍ</h2>
+            <p>Čekejte na pokyny učitelů</p>
+        </div>
+
+        <div class="controls">
+            <button id="start-camera" class="btn btn-primary">📷 Spustit kameru</button>
+            <button id="analyze-btn" class="btn btn-primary" disabled>🔍 Analyzovat</button>
+        </div>
     </div>
 
-    <script src="{% static 'main/app.js' %}"></script>
+    <script src="{% static 'main/camera.js' %}"></script>
 </body>
 </html>

@@ -3,5 +3,6 @@ from . import views
 
 urlpatterns = [
     path('', views.homepage, name='homepage'),
-    path('api/route/', views.api_route, name='api_route'),
+    path('api/classify/', views.api_classify, name='api_classify'),
+    path('api/reload-model/', views.api_reload_model, name='api_reload_model'),
 ]
