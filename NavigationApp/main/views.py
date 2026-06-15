@@ -12,6 +12,7 @@ from tensorflow import keras
 from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
 import unicodedata
 from .escape_instructions import get_instruction, get_location_name
+from django.http import FileResponse, Http404
 
 # Global variables for model and labels
 model = None
@@ -100,13 +101,50 @@ def api_classify(request):
                 return (s or '').lower()
 
         norm_key = normalize_key(location_key)
-        location_name = get_location_name(norm_key)
-        instruction = get_instruction(norm_key)
-        
+        # Special-case mappings for names with diacritics or alternative folder names
+        # e.g. 'skříňky' will normalize to variants like 'skrinky' or 'skrinky', so detect by substring
+        norm_key_mapped = norm_key
+        if 'skrin' in norm_key or 'skri' in norm_key:
+            norm_key_mapped = 'skrinky'
+        if norm_key.lower() == 'rai' or norm_key.lower() == 'rai.':
+            norm_key_mapped = 'rai'
+        location_name = get_location_name(norm_key_mapped)
+        instruction = get_instruction(norm_key_mapped)
+
+        # Choose plan image from either repo-level plans/ or fotky/plans. Default to default.png
+        repo_plans = os.path.normpath(os.path.join(settings.BASE_DIR, '..', 'plans'))
+        fotky_plans = os.path.normpath(os.path.join(settings.BASE_DIR, '..', 'fotky', 'plans'))
+        if os.path.exists(repo_plans):
+            plans_dir = repo_plans
+        else:
+            plans_dir = fotky_plans
+
+        plan_filename = 'default.png'
+        try:
+            # map normalized keys to filenames (use simple lowercase match)
+            plan_candidates = {
+                'ucebna': 'učebna.png',
+                'chodba': 'chodba.png',
+                'schodiste': 'schody.png',
+                'turnikety': 'turnikety.png',
+                'venek': 'venek.png',
+                'skrinky': 'default.png',
+                'rai': 'RAI.png'
+            }
+            candidate = plan_candidates.get(norm_key_mapped)
+            if candidate:
+                candidate_path = os.path.join(plans_dir, candidate)
+                if os.path.exists(candidate_path):
+                    plan_filename = candidate
+        except Exception:
+            plan_filename = 'default.png'
+
         return JsonResponse({
             'location': location_name,
             'location_key': location_key,
+            'location_key_normalized': norm_key_mapped,
             'instruction': instruction,
+            'plan': plan_filename,
             'confidence': confidence
         })
         
@@ -130,3 +168,26 @@ def api_reload_model(request):
     model_loaded = False
     ok = load_model()
     return JsonResponse({'reloaded': ok})
+
+
+def api_plan(request, filename):
+    """Serve small plan images from fotky/plans directory."""
+    try:
+        # Check repo-level plans/ first, then fotky/plans
+        repo_plans = os.path.normpath(os.path.join(settings.BASE_DIR, '..', 'plans'))
+        fotky_plans = os.path.normpath(os.path.join(settings.BASE_DIR, '..', 'fotky', 'plans'))
+        plans_dir = repo_plans if os.path.exists(repo_plans) else fotky_plans
+        safe_name = os.path.basename(filename)
+        file_path = os.path.join(plans_dir, safe_name)
+        if not os.path.exists(file_path):
+            # fallback to default if present
+            default_path = os.path.join(plans_dir, 'default.png')
+            if os.path.exists(default_path):
+                return FileResponse(open(default_path, 'rb'), content_type='image/png')
+            raise Http404('Plan not found')
+        return FileResponse(open(file_path, 'rb'), content_type='image/png')
+    except Http404:
+        raise
+    except Exception as e:
+        print(f"Error serving plan {filename}: {e}")
+        raise Http404('Plan error')

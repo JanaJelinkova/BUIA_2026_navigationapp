@@ -43,6 +43,10 @@
             startCameraBtn.textContent = '⏹️ Zastavit kameru';
             startCameraBtn.onclick = stopCamera;
             analyzeBtn.disabled = false;
+            // start automatic capture every 3s
+            if (!autoAnalyzeInterval) {
+                autoAnalyzeInterval = setInterval(analyzeImage, 3000);
+            }
         } catch (err) {
             console.error('Error accessing camera:', err);
             showError('Nepodařilo se přistoupit k kameře. Zkontrolujte povolení.');
@@ -72,7 +76,7 @@
     async function analyzeImage() {
         try {
             hideError();
-            loading.classList.add('active');
+            // keep UI light; show spinner briefly on manual analyze
             analyzeBtn.disabled = true;
 
             const imageData = captureImage();
@@ -132,11 +136,22 @@
                 safeMode.classList.remove('active');
             }
 
+            // Update plan image; fall back to default if not present
+            (function(){
+                const planImg = document.getElementById('plan-img');
+                const defaultSrc = '/api/plan/default.png/';
+                planImg.onerror = function(){ planImg.src = defaultSrc; };
+                if (result.plan && typeof result.plan === 'string' && result.plan.length>0) {
+                    planImg.src = `/api/plan/${encodeURIComponent(result.plan)}/`;
+                } else {
+                    planImg.src = defaultSrc;
+                }
+            })();
+
         } catch (err) {
             console.error('Error analyzing image:', err);
             showError(err.message || 'Chyba při analýze obrázku');
         } finally {
-            loading.classList.remove('active');
             analyzeBtn.disabled = false;
         }
     }
@@ -145,14 +160,8 @@
     startCameraBtn.onclick = startCamera;
     analyzeBtn.onclick = analyzeImage;
 
-    // Auto-analyze every 3 seconds when camera is running
+    // Auto-analyze interval handle
     let autoAnalyzeInterval = null;
-    
-    startCameraBtn.addEventListener('click', function() {
-        if (stream && !autoAnalyzeInterval) {
-            autoAnalyzeInterval = setInterval(analyzeImage, 3000);
-        }
-    });
 
     function stopCamera() {
         if (stream) {
@@ -162,7 +171,7 @@
             startCameraBtn.textContent = '📷 Spustit kameru';
             startCameraBtn.onclick = startCamera;
             analyzeBtn.disabled = true;
-            
+
             if (autoAnalyzeInterval) {
                 clearInterval(autoAnalyzeInterval);
                 autoAnalyzeInterval = null;
@@ -175,4 +184,14 @@
         showError('Váš prohlížeč nepodporuje přístup k kameře');
         startCameraBtn.disabled = true;
     }
+
+    // Ensure plan image shows default immediately on page load
+    (function initPlanDefault(){
+        const planImg = document.getElementById('plan-img');
+        const defaultSrc = '/api/plan/default.png/';
+        if (planImg) {
+            planImg.src = defaultSrc;
+            planImg.onerror = function(){ planImg.src = defaultSrc; };
+        }
+    })();
 })();

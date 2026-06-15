@@ -26,6 +26,15 @@ ESCAPE_INSTRUCTIONS = {
         'Projděte turnikety a pokračujte ven před budovu',
         'Opusťte budovu přes turnikety směrem ven'
     ],
+    'skrinky': [
+        'Vyjděte po schodech do přízemí.'
+    ],
+    'rai': [
+        # RAI uses the same prompts as učebna; will be chosen at runtime
+        'Opusťte učebnu a otočte se do leva, pokračujte rovně ke schodišti',
+        'Vyjděte z učebny, dejte se vlevo a pokračujte směrem ke schodiště',
+        'Ukončete pobyt v učebně, opusťte místnost a jděte vlevo ke schodišti'
+    ],
     'venek': [
         'Jste v bezpečí, čekejte na pokyny učitele',
         'Zůstaňte venku na volném prostranství a vyčkejte další instrukce',
@@ -39,7 +48,9 @@ LOCATION_NAMES = {
     'chodba': 'Chodba',
     'schodiste': 'Schodiště',
     'turnikety': 'Turnikety (Přízemí)',
-    'venek': 'Venek'
+    'venek': 'Venek',
+    'skrinky': 'Skříňky',
+    'rai': 'RAI'
 }
 
 def get_instruction(location_key):

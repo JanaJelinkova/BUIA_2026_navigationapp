@@ -325,10 +325,23 @@ def train_model(args):
         preds = model.predict(validation_generator, steps=val_steps_all, verbose=1)
         y_pred = np.argmax(preds, axis=1)
         y_true = validation_generator.classes[:len(y_pred)]
-        target_names = [k for k, v in sorted(train_generator.class_indices.items(), key=lambda x: x[1])]
-        print(classification_report(y_true, y_pred, target_names=target_names))
+        # Build full list of target names from the training generator (index -> name)
+        all_target_names = [k for k, v in sorted(train_generator.class_indices.items(), key=lambda x: x[1])]
+
+        # Determine which numeric labels are actually present in evaluation
+        labels_present = np.unique(np.concatenate([y_true, y_pred]))
+
+        # Map those numeric labels to their display names
+        try:
+            target_names_present = [all_target_names[int(l)] for l in labels_present]
+        except Exception:
+            # Fallback: if mapping fails, use string versions
+            target_names_present = [str(int(l)) for l in labels_present]
+
+        # Print classification report only for labels present to avoid mismatch errors
+        print(classification_report(y_true, y_pred, labels=labels_present.tolist(), target_names=target_names_present))
         print("Confusion matrix:")
-        print(confusion_matrix(y_true, y_pred))
+        print(confusion_matrix(y_true, y_pred, labels=labels_present.tolist()))
     except Exception as e:
         print(f"Evaluation failed: {e}")
 
