@@ -14,7 +14,7 @@ ESCAPE_INSTRUCTIONS = {
     'chodba': [
         'Pokračujte rovně ke schodišti',
         'Následujte chodbu až ke schodišti',
-        'Jděte po chodbě směrem k východu ke schodišti'
+        'Jděte po chodbě směrem ke schodišti'
     ],
     'schodiste': [
         'Sejděte do přízemí',
@@ -27,13 +27,14 @@ ESCAPE_INSTRUCTIONS = {
         'Opusťte budovu přes turnikety směrem ven'
     ],
     'skrinky': [
-        'Vyjděte po schodech do přízemí.'
+        'Opusťte skříňky a pokračujte směrem ke schodišti',
+        'Přejděte kolem skříněk a pokračujte bezpečně dál ke schodišti',
+        'Odejděte od skříněk a následujte cestu ke schodišti'
     ],
     'rai': [
-        # RAI uses the same prompts as učebna; will be chosen at runtime
-        'Opusťte učebnu a otočte se do leva, pokračujte rovně ke schodišti',
-        'Vyjděte z učebny, dejte se vlevo a pokračujte směrem ke schodiště',
-        'Ukončete pobyt v učebně, opusťte místnost a jděte vlevo ke schodišti'
+        'Opusťte učebnu RAI a zatočte do leva směrem ke schodišti',
+        'Vyjděte z RAI a pokračujte vlevo ke schodišti',
+        'Opusťte učebnu  RAI a postupujte směrem ke schodišti vlevo'
     ],
     'venek': [
         'Jste v bezpečí, čekejte na pokyny učitele',

@@ -66,10 +66,16 @@ Tento skript:
 
 ```bash
 cd NavigationApp
-python manage.py runserver
+python manage.py runserver 0.0.0.0:8000
+ngrok config add-authtoken $YOUR_AUTHTOKEN
+ngrok http --url=sedate-goon-flock.ngrok-free.dev 80
+ngrok http 8000 --host-header="localhost"
+
 ```
 
-Aplikace bude dostupná na `http://localhost:8000`
+Aplikace bude dostupná na 
+`http://localhost:8000`
+`https://sedate-goon-flock.ngrok-free.dev`
 
 ## Použití
 
